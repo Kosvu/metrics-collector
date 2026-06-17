@@ -23,3 +23,6 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# Локальная памятка сессии (не для репозитория)
+SESSION_CONTEXT.md
