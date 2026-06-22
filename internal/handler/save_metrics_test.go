@@ -8,77 +8,55 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type stubService struct{}
-
-func (s *stubService) SaveGauge(name string, value float64) {
-}
-
-func (s *stubService) SaveCounter(name string, value int64) {
-}
-
 func TestSaveMetrics(t *testing.T) {
+
+	ts := httptest.NewServer(newTestRouter(stubService{}))
+	defer ts.Close()
+
 	tests := []struct {
-		name        string
-		metricType  string
-		metricName  string
-		metricValue string
-		want        int
+		name string
+
+		path       string
+		wantStatus int
 	}{
+		// {name: "known gauge", path: "/value/gauge/Alloc", wantStatus: 200, wantBody: "42.5"},
+		// update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		{
-			name:        "empty name",
-			metricType:  "gauge",
-			metricName:  "",
-			metricValue: "1",
-			want:        404,
+			name:       "empty name",
+			path:       "/update/gauge//1",
+			wantStatus: 404,
 		},
 		{
-			name:        "invalid type",
-			metricType:  "unknown",
-			metricName:  "Alloc",
-			metricValue: "1",
-			want:        400,
+			name:       "invalid type",
+			path:       "/update/unknown/Alloc/1",
+			wantStatus: 400,
 		},
 		{
-			name:        "invalid gauge value",
-			metricType:  "gauge",
-			metricName:  "Alloc",
-			metricValue: "abc",
-			want:        400,
+			name:       "invalid gauge value",
+			path:       "/update/gauge/Alloc/abc",
+			wantStatus: 400,
 		},
 		{
-			name:        "invalid counter value",
-			metricType:  "counter",
-			metricName:  "PollCount",
-			metricValue: "abc",
-			want:        400,
+			name:       "invalid counter value",
+			path:       "/update/counter/PollCount/abc",
+			wantStatus: 400,
 		},
 		{
-			name:        "valid gauge test",
-			metricType:  "gauge",
-			metricName:  "Alloc",
-			metricValue: "42.5",
-			want:        200,
+			name:       "valid gauge test",
+			path:       "/update/gauge/Alloc/42.5",
+			wantStatus: 200,
 		},
 		{
-			name:        "valid counter test",
-			metricType:  "counter",
-			metricName:  "PollCount",
-			metricValue: "10",
-			want:        200,
+			name:       "valid counter test",
+			path:       "/update/counter/PollCount/10",
+			wantStatus: 200,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler := NewMetricsHTTPHandlers(&stubService{})
-			req := httptest.NewRequest(http.MethodPost, "/", nil)
-			req.SetPathValue("type", test.metricType)
-			req.SetPathValue("name", test.metricName)
-			req.SetPathValue("value", test.metricValue)
-
-			rec := httptest.NewRecorder()
-			handler.SaveMetrics(rec, req)
-			assert.Equal(t, test.want, rec.Code)
+			resp, _ := testRequest(t, ts, http.MethodPost, test.path)
+			assert.Equal(t, test.wantStatus, resp.StatusCode)
 		})
 	}
 }

@@ -3,6 +3,8 @@ package handler
 import (
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi"
 )
 
 func (h *MetricsHTTPHandlers) SaveMetrics(w http.ResponseWriter, r *http.Request) {
@@ -10,9 +12,9 @@ func (h *MetricsHTTPHandlers) SaveMetrics(w http.ResponseWriter, r *http.Request
 	// вызвать нужный метод в service
 	// отдать нужный http ответ
 
-	pathType := r.PathValue("type")
-	pathName := r.PathValue("name")
-	pathValue := r.PathValue("value")
+	pathType := chi.URLParam(r, "type")
+	pathName := chi.URLParam(r, "name")
+	pathValue := chi.URLParam(r, "value")
 
 	if pathName == "" {
 		w.WriteHeader(http.StatusNotFound)
