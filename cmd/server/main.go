@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"metrics/internal/handler"
 	"metrics/internal/repository"
 	"metrics/internal/service"
@@ -21,7 +22,11 @@ func main() {
 	r.Get("/", metricsHTTP.GetAll)
 	r.Post("/update/{type}/{name}/{value}", metricsHTTP.SaveMetrics)
 
-	err := http.ListenAndServe(":8080", r)
+	addr := flag.String("a", ":8080", "The flag specifies the server address")
+
+	flag.Parse()
+
+	err := http.ListenAndServe(*addr, r)
 	if err != nil {
 		panic(err)
 	}
