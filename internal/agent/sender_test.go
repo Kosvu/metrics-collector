@@ -1,12 +1,15 @@
 package agent
 
 import (
+	"encoding/json"
+	models "metrics/internal/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeReader struct{}
@@ -16,15 +19,19 @@ func (f *fakeReader) GetAll() (map[string]float64, map[string]int64) {
 }
 
 func TestSend(t *testing.T) {
-	var gotPaths []string
+	got := make(map[string]models.Metrics)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPaths = append(gotPaths, r.URL.Path)
+		var m models.Metrics
+		json.NewDecoder(r.Body).Decode(&m)
+		got[m.ID] = m
 	}))
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")
 	sender := NewSender(&fakeReader{}, addr, srv.Client())
 	sender.Send()
-	assert.Equal(t, 2, len(gotPaths))
-	assert.Contains(t, gotPaths, "/update/gauge/Alloc/1")
-	assert.Contains(t, gotPaths, "/update/counter/PollCount/5")
+	require.NotNil(t, got["Alloc"].Value)
+	assert.Equal(t, float64(1), *got["Alloc"].Value)
+	require.NotNil(t, got["PollCount"].Delta)
+	assert.Equal(t, int64(5), *got["PollCount"].Delta)
 }

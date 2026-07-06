@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi"
@@ -45,6 +46,8 @@ func newTestRouter(s stubService) chi.Router {
 	r.Get("/value/{type}/{name}", h.GetMetrics)
 	r.Get("/", h.GetAll)
 	r.Post("/update/{type}/{name}/{value}", h.SaveMetrics)
+	r.Post("/update/", h.Update)
+	r.Post("/value/", h.GetJSON)
 
 	return r
 }
@@ -58,4 +61,19 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	return resp, string(body)
+}
+
+func testRequestBody(t *testing.T, ts *httptest.Server, method, path, body string) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	got, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(got)
 }

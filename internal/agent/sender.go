@@ -1,10 +1,12 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
+	models "metrics/internal/model"
 	"net/http"
-	"strconv"
 )
 
 type Sender struct {
@@ -29,8 +31,25 @@ func (s *Sender) Send() {
 	gauge, counter := s.metricsReader.GetAll()
 
 	for name, value := range gauge {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%s", s.serverAddr, "gauge", name, strconv.FormatFloat(value, 'f', -1, 64))
-		resp, err := s.client.Post(url, "text/plain", nil)
+
+		var buf bytes.Buffer
+
+		url := fmt.Sprintf("http://%s/update/", s.serverAddr)
+
+		metricS := models.Metrics{
+			ID:    name,
+			MType: models.Gauge,
+			Delta: nil,
+			Value: &value,
+		}
+
+		err := json.NewEncoder(&buf).Encode(metricS)
+		if err != nil {
+			log.Printf("failed model encode")
+			continue
+		}
+
+		resp, err := s.client.Post(url, "application/json", &buf)
 		if err != nil {
 			log.Printf("failed to get response: %v", err)
 			//continue потому что если тело не получили, то resp.Body.Close() запаникует
@@ -40,10 +59,27 @@ func (s *Sender) Send() {
 	}
 
 	for name, value := range counter {
-		url := fmt.Sprintf("http://%s/update/%s/%s/%s", s.serverAddr, "counter", name, strconv.FormatInt(value, 10))
-		resp, err := s.client.Post(url, "text/plain", nil)
+		var buf bytes.Buffer
+
+		url := fmt.Sprintf("http://%s/update/", s.serverAddr)
+
+		metricS := models.Metrics{
+			ID:    name,
+			MType: models.Counter,
+			Delta: &value,
+			Value: nil,
+		}
+
+		err := json.NewEncoder(&buf).Encode(metricS)
+		if err != nil {
+			log.Printf("failed model encode")
+			continue
+		}
+
+		resp, err := s.client.Post(url, "application/json", &buf)
 		if err != nil {
 			log.Printf("failed to get response: %v", err)
+			//continue потому что если тело не получили, то resp.Body.Close() запаникует
 			continue
 		}
 		resp.Body.Close()
