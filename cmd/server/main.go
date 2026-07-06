@@ -27,6 +27,8 @@ func main() {
 	r.Get("/value/{type}/{name}", metricsHTTP.GetMetrics)
 	r.Get("/", metricsHTTP.GetAll)
 	r.Post("/update/{type}/{name}/{value}", metricsHTTP.SaveMetrics)
+	r.Post("/update/", metricsHTTP.Update)
+	r.Post("/value/", metricsHTTP.GetJSON)
 
 	cfg := config.NewServerConfig()
 
