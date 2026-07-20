@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	models "metrics/internal/model"
 	"net/http"
@@ -23,7 +24,11 @@ func TestSend(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var m models.Metrics
-		json.NewDecoder(r.Body).Decode(&m)
+		gz, err := gzip.NewReader(r.Body)
+		require.NoError(t, err)
+		defer gz.Close()
+		err = json.NewDecoder(gz).Decode(&m)
+		require.NoError(t, err)
 		got[m.ID] = m
 	}))
 	defer srv.Close()

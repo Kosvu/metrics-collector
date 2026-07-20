@@ -1,11 +1,23 @@
 package middleware
 
 import (
+	"compress/gzip"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
 )
+
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
 
 type responseData struct {
 	status int
@@ -55,6 +67,38 @@ func WithLogging(log *zap.SugaredLogger) Middleware {
 				"duration", duration,
 				"size", responseData.size,
 			)
+		})
+	}
+}
+
+func GZipHandle() Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+				zr, err := gzip.NewReader(r.Body)
+				if err != nil {
+					io.WriteString(w, err.Error())
+					return
+
+				}
+				r.Body = zr
+				defer zr.Close()
+			}
+
+			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+				if err != nil {
+					io.WriteString(w, err.Error())
+					return
+				}
+				defer zw.Close()
+
+				w.Header().Set("Content-Encoding", "gzip")
+				next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: zw}, r)
+				return
+			}
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }

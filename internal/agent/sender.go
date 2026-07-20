@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -43,13 +44,31 @@ func (s *Sender) Send() {
 			Value: &value,
 		}
 
-		err := json.NewEncoder(&buf).Encode(metricS)
+		gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+
 		if err != nil {
-			log.Printf("failed model encode")
+			log.Printf("failed to create gz writer")
 			continue
 		}
 
-		resp, err := s.client.Post(url, "application/json", &buf)
+		err = json.NewEncoder(gz).Encode(metricS)
+		if err != nil {
+			log.Print("failed model encode")
+			continue
+		}
+
+		gz.Close()
+
+		req, err := http.NewRequest(http.MethodPost, url, &buf)
+
+		if err != nil {
+			log.Print("failed to create request")
+			continue
+		}
+
+		req.Header.Set("Content-Encoding", "gzip")
+		resp, err := s.client.Do(req)
+
 		if err != nil {
 			log.Printf("failed to get response: %v", err)
 			//continue потому что если тело не получили, то resp.Body.Close() запаникует
@@ -70,13 +89,31 @@ func (s *Sender) Send() {
 			Value: nil,
 		}
 
-		err := json.NewEncoder(&buf).Encode(metricS)
+		gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+
 		if err != nil {
-			log.Printf("failed model encode")
+			log.Printf("failed to create gz writer")
 			continue
 		}
 
-		resp, err := s.client.Post(url, "application/json", &buf)
+		err = json.NewEncoder(gz).Encode(metricS)
+		if err != nil {
+			log.Print("failed model encode")
+			continue
+		}
+
+		gz.Close()
+
+		req, err := http.NewRequest(http.MethodPost, url, &buf)
+
+		if err != nil {
+			log.Print("failed to create request")
+			continue
+		}
+
+		req.Header.Set("Content-Encoding", "gzip")
+		resp, err := s.client.Do(req)
+
 		if err != nil {
 			log.Printf("failed to get response: %v", err)
 			//continue потому что если тело не получили, то resp.Body.Close() запаникует

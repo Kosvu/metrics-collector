@@ -22,6 +22,7 @@ func main() {
 	r := chi.NewRouter()
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 
+	r.Use(middleware.GZipHandle())
 	r.Use(middleware.WithLogging(log))
 
 	r.Get("/value/{type}/{name}", metricsHTTP.GetMetrics)
