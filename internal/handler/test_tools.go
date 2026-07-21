@@ -17,6 +17,10 @@ type stubService struct {
 	MetError     error
 }
 
+type stubSaver struct{}
+
+func (s *stubSaver) Save() error { return nil }
+
 func (s *stubService) SaveGauge(name string, value float64) {
 }
 
@@ -40,8 +44,8 @@ func (s *stubService) GetAll() (map[string]float64, map[string]int64) {
 	return stubGaugeMap, stubCounterMap
 }
 
-func newTestRouter(s stubService) chi.Router {
-	h := NewMetricsHTTPHandlers(&s)
+func newTestRouter(sService stubService) chi.Router {
+	h := NewMetricsHTTPHandlers(&sService, &stubSaver{}, false)
 	r := chi.NewRouter()
 	r.Get("/value/{type}/{name}", h.GetMetrics)
 	r.Get("/", h.GetAll)

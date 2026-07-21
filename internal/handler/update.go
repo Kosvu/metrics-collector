@@ -24,6 +24,12 @@ func (h *MetricsHTTPHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.metricsService.SaveGauge(metric.ID, *metric.Value)
+		if h.syncSave {
+			if err := h.saver.Save(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 		gauge, err := h.metricsService.GetGauge(metric.ID)
 
 		if err != nil {
@@ -54,6 +60,12 @@ func (h *MetricsHTTPHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.metricsService.SaveCounter(metric.ID, *metric.Delta)
+		if h.syncSave {
+			if err := h.saver.Save(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 		counter, err := h.metricsService.GetCounter(metric.ID)
 
 		if err != nil {

@@ -8,7 +8,10 @@ import (
 )
 
 type ServerConfig struct {
-	Addr string
+	Addr            string
+	StoreInterval   int
+	FileStoragePath string
+	Restore         bool
 }
 
 type AgentConfig struct {
@@ -19,12 +22,32 @@ type AgentConfig struct {
 
 func NewServerConfig() *ServerConfig {
 
-	cfg := &ServerConfig{}
+	cfg := &ServerConfig{StoreInterval: 300, FileStoragePath: "/tmp/metrics-db.json", Restore: true}
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "server address")
+	flag.IntVar(&cfg.StoreInterval, "i", 300, "store interval")
+	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
+	flag.BoolVar(&cfg.Restore, "r", true, "restore")
 	flag.Parse()
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
 		cfg.Addr = envAddr
+	}
+	if envStoreInterval := os.Getenv("STORE_INTERVAL"); envStoreInterval != "" {
+		envStoreIntervalInt, err := strconv.Atoi(envStoreInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.StoreInterval = envStoreIntervalInt
+	}
+	if envFileStoragePath, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
+		cfg.FileStoragePath = envFileStoragePath
+	}
+	if envRestore := os.Getenv("RESTORE"); envRestore != "" {
+		envRestoreBool, err := strconv.ParseBool(envRestore)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.Restore = envRestoreBool
 	}
 
 	return cfg
