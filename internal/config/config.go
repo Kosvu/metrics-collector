@@ -12,6 +12,7 @@ type ServerConfig struct {
 	StoreInterval   int
 	FileStoragePath string
 	Restore         bool
+	Dsn             string
 }
 
 type AgentConfig struct {
@@ -27,6 +28,7 @@ func NewServerConfig() *ServerConfig {
 	flag.IntVar(&cfg.StoreInterval, "i", 300, "store interval")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
 	flag.BoolVar(&cfg.Restore, "r", true, "restore")
+	flag.StringVar(&cfg.Dsn, "d", "", "dsn for connect to database")
 	flag.Parse()
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
@@ -48,6 +50,9 @@ func NewServerConfig() *ServerConfig {
 			log.Fatal(err)
 		}
 		cfg.Restore = envRestoreBool
+	}
+	if envDsn := os.Getenv("DATABASE_DSN"); envDsn != "" {
+		cfg.Dsn = envDsn
 	}
 
 	return cfg

@@ -1,9 +1,12 @@
 package handler
 
+import "database/sql"
+
 type MetricsHTTPHandlers struct {
 	metricsService MetricsService
 	saver          Saver
 	syncSave       bool
+	db             *sql.DB
 }
 
 type Saver interface {
@@ -18,10 +21,11 @@ type MetricsService interface {
 	GetAll() (map[string]float64, map[string]int64)
 }
 
-func NewMetricsHTTPHandlers(metricService MetricsService, saver Saver, syncSave bool) *MetricsHTTPHandlers {
+func NewMetricsHTTPHandlers(metricService MetricsService, saver Saver, syncSave bool, db *sql.DB) *MetricsHTTPHandlers {
 	return &MetricsHTTPHandlers{
 		metricsService: metricService,
 		saver:          saver,
 		syncSave:       syncSave,
+		db:             db,
 	}
 }

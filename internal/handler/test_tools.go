@@ -45,7 +45,7 @@ func (s *stubService) GetAll() (map[string]float64, map[string]int64) {
 }
 
 func newTestRouter(sService stubService) chi.Router {
-	h := NewMetricsHTTPHandlers(&sService, &stubSaver{}, false)
+	h := NewMetricsHTTPHandlers(&sService, &stubSaver{}, false, nil)
 	r := chi.NewRouter()
 	r.Get("/value/{type}/{name}", h.GetMetrics)
 	r.Get("/", h.GetAll)
