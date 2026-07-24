@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"metrics/internal/config"
 	"metrics/internal/handler"
 	"metrics/internal/logger"
@@ -15,15 +16,20 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
-
 	metricsStorage := repository.NewMemStorage()
 	metricsService := service.NewMetricsService(metricsStorage)
 	cfg := config.NewServerConfig()
+	db, err := sql.Open("pgx", cfg.Dsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
 	producer := storage.NewProducer(metricsStorage, cfg.FileStoragePath)
-	metricsHTTP := handler.NewMetricsHTTPHandlers(metricsService, producer, cfg.StoreInterval == 0)
+	metricsHTTP := handler.NewMetricsHTTPHandlers(metricsService, producer, cfg.StoreInterval == 0, db)
 	log := logger.NewSugarLogger()
 	defer log.Sync()
 
@@ -38,6 +44,7 @@ func main() {
 	r.Post("/update/{type}/{name}/{value}", metricsHTTP.SaveMetrics)
 	r.Post("/update/", metricsHTTP.Update)
 	r.Post("/value/", metricsHTTP.GetJSON)
+	r.Get("/ping", metricsHTTP.Ping)
 
 	if cfg.Restore {
 		err := producer.Load()
