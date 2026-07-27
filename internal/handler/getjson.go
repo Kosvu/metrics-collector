@@ -18,7 +18,7 @@ func (h *MetricsHTTPHandlers) GetJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch metric.MType {
 	case models.Counter:
-		val, err := h.metricsService.GetCounter(metric.ID)
+		val, err := h.metricsService.GetCounter(r.Context(), metric.ID)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
@@ -37,7 +37,7 @@ func (h *MetricsHTTPHandlers) GetJSON(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(res)
 	case models.Gauge:
-		val, err := h.metricsService.GetGauge(metric.ID)
+		val, err := h.metricsService.GetGauge(r.Context(), metric.ID)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)

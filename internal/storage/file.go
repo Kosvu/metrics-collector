@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	models "metrics/internal/model"
@@ -8,9 +9,9 @@ import (
 )
 
 type MetricsStorage interface {
-	GetAll() (map[string]float64, map[string]int64)
-	SaveGauge(name string, value float64)
-	SaveCounter(name string, value int64)
+	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
+	SaveGauge(ctx context.Context, name string, value float64) error
+	SaveCounter(ctx context.Context, name string, value int64) error
 }
 
 type Producer struct {
@@ -26,7 +27,7 @@ func NewProducer(storage MetricsStorage, path string) *Producer {
 }
 
 // Взять метрики из памяти и записать их в файл
-func (p *Producer) Save() error {
+func (p *Producer) Save(ctx context.Context) error {
 	if p.path == "" {
 		return nil
 	}
@@ -39,7 +40,11 @@ func (p *Producer) Save() error {
 
 	defer file.Close()
 
-	gauge, counter := p.storage.GetAll()
+	gauge, counter, err := p.storage.GetAll(ctx)
+
+	if err != nil {
+		return err
+	}
 
 	for name, value := range gauge {
 
@@ -77,7 +82,7 @@ func (p *Producer) Save() error {
 
 // При запуске прочитать метрики из файла
 
-func (p *Producer) Load() error {
+func (p *Producer) Load(ctx context.Context) error {
 	if p.path == "" {
 		return nil
 	}
@@ -107,9 +112,9 @@ func (p *Producer) Load() error {
 		}
 		switch metric.MType {
 		case models.Counter:
-			p.storage.SaveCounter(metric.ID, *metric.Delta)
+			p.storage.SaveCounter(ctx, metric.ID, *metric.Delta)
 		case models.Gauge:
-			p.storage.SaveGauge(metric.ID, *metric.Value)
+			p.storage.SaveGauge(ctx, metric.ID, *metric.Value)
 		}
 	}
 

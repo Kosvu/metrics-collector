@@ -23,14 +23,17 @@ func (h *MetricsHTTPHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.metricsService.SaveGauge(metric.ID, *metric.Value)
+		if err := h.metricsService.SaveGauge(r.Context(), metric.ID, *metric.Value); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if h.syncSave {
-			if err := h.saver.Save(); err != nil {
+			if err := h.saver.Save(r.Context()); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 		}
-		gauge, err := h.metricsService.GetGauge(metric.ID)
+		gauge, err := h.metricsService.GetGauge(r.Context(), metric.ID)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -59,14 +62,17 @@ func (h *MetricsHTTPHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.metricsService.SaveCounter(metric.ID, *metric.Delta)
+		if err := h.metricsService.SaveCounter(r.Context(), metric.ID, *metric.Delta); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if h.syncSave {
-			if err := h.saver.Save(); err != nil {
+			if err := h.saver.Save(r.Context()); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 		}
-		counter, err := h.metricsService.GetCounter(metric.ID)
+		counter, err := h.metricsService.GetCounter(r.Context(), metric.ID)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

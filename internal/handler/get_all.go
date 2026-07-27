@@ -7,7 +7,11 @@ import (
 )
 
 func (h *MetricsHTTPHandlers) GetAll(w http.ResponseWriter, r *http.Request) {
-	gMap, cMap := h.metricsService.GetAll()
+	gMap, cMap, err := h.metricsService.GetAll(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	var b strings.Builder
 	b.WriteString("<html><body>")
