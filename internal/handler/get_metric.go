@@ -18,7 +18,7 @@ func (h *MetricsHTTPHandlers) GetMetrics(w http.ResponseWriter, r *http.Request)
 	}
 
 	if pathType == "gauge" {
-		metric, err := h.metricsService.GetGauge(pathName)
+		metric, err := h.metricsService.GetGauge(r.Context(), pathName)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
@@ -32,7 +32,7 @@ func (h *MetricsHTTPHandlers) GetMetrics(w http.ResponseWriter, r *http.Request)
 	}
 
 	if pathType == "counter" {
-		metric, err := h.metricsService.GetCounter(pathName)
+		metric, err := h.metricsService.GetCounter(r.Context(), pathName)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)

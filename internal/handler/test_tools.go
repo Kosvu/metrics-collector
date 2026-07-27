@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,29 +20,31 @@ type stubService struct {
 
 type stubSaver struct{}
 
-func (s *stubSaver) Save() error { return nil }
+func (s *stubSaver) Save(ctx context.Context) error { return nil }
 
-func (s *stubService) SaveGauge(name string, value float64) {
+func (s *stubService) SaveGauge(ctx context.Context, name string, value float64) error {
+	return nil
 }
 
-func (s *stubService) SaveCounter(name string, value int64) {
+func (s *stubService) SaveCounter(ctx context.Context, name string, value int64) error {
+	return nil
 }
 
-func (s *stubService) GetGauge(name string) (float64, error) {
+func (s *stubService) GetGauge(ctx context.Context, name string) (float64, error) {
 	return s.GaugeValue, s.MetError
 }
-func (s *stubService) GetCounter(name string) (int64, error) {
+func (s *stubService) GetCounter(ctx context.Context, name string) (int64, error) {
 	return s.CounterValue, s.MetError
 }
 
-func (s *stubService) GetAll() (map[string]float64, map[string]int64) {
+func (s *stubService) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	stubGaugeMap := make(map[string]float64)
 	stubCounterMap := make(map[string]int64)
 
 	stubGaugeMap["Alloc"] = s.GaugeValue
 	stubCounterMap["Poll"] = s.CounterValue
 
-	return stubGaugeMap, stubCounterMap
+	return stubGaugeMap, stubCounterMap, nil
 }
 
 func newTestRouter(sService stubService) chi.Router {

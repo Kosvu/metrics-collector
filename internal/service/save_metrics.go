@@ -1,9 +1,13 @@
 package service
 
-func (s *MetricsService) SaveGauge(name string, value float64) {
-	s.metricsStorage.SaveGauge(name, value)
+import "context"
+
+func (s *MetricsService) SaveGauge(ctx context.Context, name string, value float64) error {
+	err := s.metricsStorage.SaveGauge(ctx, name, value)
+	return err
 }
 
-func (s *MetricsService) SaveCounter(name string, value int64) {
-	s.metricsStorage.SaveCounter(name, value)
+func (s *MetricsService) SaveCounter(ctx context.Context, name string, value int64) error {
+	err := s.metricsStorage.SaveCounter(ctx, name, value)
+	return err
 }

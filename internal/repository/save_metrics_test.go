@@ -34,7 +34,7 @@ func TestSaveCounter(t *testing.T) {
 			storage := NewMemStorage()
 
 			for _, v := range test.values {
-				storage.SaveCounter("PollCount", v)
+				storage.SaveCounter(t.Context(), "PollCount", v)
 			}
 
 			assert.Equal(t, test.want, storage.counterMap["PollCount"])
@@ -70,7 +70,7 @@ func TestSaveGauge(t *testing.T) {
 			storage := NewMemStorage()
 
 			for _, v := range test.values {
-				storage.SaveGauge("Alloc", v)
+				storage.SaveGauge(t.Context(), "Alloc", v)
 			}
 
 			assert.Equal(t, test.want, storage.gaugeMap["Alloc"])

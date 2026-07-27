@@ -34,9 +34,13 @@ func (h *MetricsHTTPHandlers) SaveMetrics(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		h.metricsService.SaveGauge(pathName, floatValue)
+		if err := h.metricsService.SaveGauge(r.Context(), pathName, floatValue); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		if h.syncSave {
-			if err := h.saver.Save(); err != nil {
+			if err := h.saver.Save(r.Context()); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -52,9 +56,12 @@ func (h *MetricsHTTPHandlers) SaveMetrics(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		h.metricsService.SaveCounter(pathName, intValue)
+		if err := h.metricsService.SaveCounter(r.Context(), pathName, intValue); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if h.syncSave {
-			if err := h.saver.Save(); err != nil {
+			if err := h.saver.Save(r.Context()); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

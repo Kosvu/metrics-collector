@@ -1,8 +1,11 @@
 package repository
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func (r *MemStorage) GetGauge(name string) (float64, error) {
+func (r *MemStorage) GetGauge(ctx context.Context, name string) (float64, error) {
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -16,7 +19,7 @@ func (r *MemStorage) GetGauge(name string) (float64, error) {
 	return value, nil
 }
 
-func (r *MemStorage) GetCounter(name string) (int64, error) {
+func (r *MemStorage) GetCounter(ctx context.Context, name string) (int64, error) {
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -30,7 +33,7 @@ func (r *MemStorage) GetCounter(name string) (int64, error) {
 	return value, nil
 }
 
-func (r *MemStorage) GetAll() (map[string]float64, map[string]int64) {
+func (r *MemStorage) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -46,5 +49,5 @@ func (r *MemStorage) GetAll() (map[string]float64, map[string]int64) {
 		tmpGauge[key] = value
 	}
 
-	return tmpGauge, tmpCounter
+	return tmpGauge, tmpCounter, nil
 }

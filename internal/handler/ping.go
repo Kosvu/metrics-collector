@@ -3,9 +3,7 @@ package handler
 import "net/http"
 
 func (h *MetricsHTTPHandlers) Ping(w http.ResponseWriter, r *http.Request) {
-	err := h.db.PingContext(r.Context())
-
-	if err != nil {
+	if err := h.ping.Ping(r.Context()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
