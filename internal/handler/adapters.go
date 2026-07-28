@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	models "metrics/internal/model"
 )
 
 type MetricsHTTPHandlers struct {
@@ -25,6 +26,7 @@ type MetricsService interface {
 	GetGauge(ctx context.Context, name string) (float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
 	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
+	SaveBatch(ctx context.Context, metrics []models.Metrics) error
 }
 
 func NewMetricsHTTPHandlers(metricService MetricsService, saver Saver, syncSave bool, ping Pinger) *MetricsHTTPHandlers {

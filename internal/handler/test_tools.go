@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"io"
+	models "metrics/internal/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,6 +36,10 @@ func (s *stubService) GetGauge(ctx context.Context, name string) (float64, error
 }
 func (s *stubService) GetCounter(ctx context.Context, name string) (int64, error) {
 	return s.CounterValue, s.MetError
+}
+
+func (s *stubService) SaveBatch(ctx context.Context, metrics []models.Metrics) error {
+	return nil
 }
 
 func (s *stubService) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
