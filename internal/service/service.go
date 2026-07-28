@@ -1,6 +1,9 @@
 package service
 
-import "context"
+import (
+	"context"
+	models "metrics/internal/model"
+)
 
 type MetricsService struct {
 	metricsStorage MetricsStorage
@@ -12,6 +15,7 @@ type MetricsStorage interface {
 	GetGauge(ctx context.Context, name string) (float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
 	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
+	SaveBatch(ctx context.Context, metrics []models.Metrics) error
 }
 
 func NewMetricsService(metricsStorage MetricsStorage) *MetricsService {

@@ -59,6 +59,7 @@ func main() {
 	r.Post("/update/", metricsHTTP.Update)
 	r.Post("/value/", metricsHTTP.GetJSON)
 	r.Get("/ping", metricsHTTP.Ping)
+	r.Post("/updates/", metricsHTTP.Updates)
 
 	if cfg.Restore {
 		if err := producer.Load(ctx); err != nil {

@@ -23,13 +23,15 @@ func TestSend(t *testing.T) {
 	got := make(map[string]models.Metrics)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var m models.Metrics
+		var metrics []models.Metrics
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 		defer gz.Close()
-		err = json.NewDecoder(gz).Decode(&m)
+		err = json.NewDecoder(gz).Decode(&metrics)
 		require.NoError(t, err)
-		got[m.ID] = m
+		for _, m := range metrics {
+			got[m.ID] = m
+		}
 	}))
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")

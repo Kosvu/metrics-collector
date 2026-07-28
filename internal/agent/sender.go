@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"log"
 	models "metrics/internal/model"
 	"net/http"
 )
@@ -29,96 +28,46 @@ func NewSender(metricsReader MetricsReader, serverAddr string, client *http.Clie
 }
 
 func (s *Sender) Send() {
+
+	var metrics []models.Metrics
 	gauge, counter := s.metricsReader.GetAll()
 
 	for name, value := range gauge {
-
-		var buf bytes.Buffer
-
-		url := fmt.Sprintf("http://%s/update/", s.serverAddr)
-
-		metricS := models.Metrics{
-			ID:    name,
-			MType: models.Gauge,
-			Delta: nil,
-			Value: &value,
-		}
-
-		gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
-
-		if err != nil {
-			log.Printf("failed to create gz writer")
-			continue
-		}
-
-		err = json.NewEncoder(gz).Encode(metricS)
-		if err != nil {
-			log.Print("failed model encode")
-			continue
-		}
-
-		gz.Close()
-
-		req, err := http.NewRequest(http.MethodPost, url, &buf)
-
-		if err != nil {
-			log.Print("failed to create request")
-			continue
-		}
-
-		req.Header.Set("Content-Encoding", "gzip")
-		resp, err := s.client.Do(req)
-
-		if err != nil {
-			log.Printf("failed to get response: %v", err)
-			//continue потому что если тело не получили, то resp.Body.Close() запаникует
-			continue
-		}
-		resp.Body.Close()
+		v := &value
+		metrics = append(metrics, models.Metrics{ID: name, MType: models.Gauge, Value: v})
 	}
 
-	for name, value := range counter {
-		var buf bytes.Buffer
-
-		url := fmt.Sprintf("http://%s/update/", s.serverAddr)
-
-		metricS := models.Metrics{
-			ID:    name,
-			MType: models.Counter,
-			Delta: &value,
-			Value: nil,
-		}
-
-		gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
-
-		if err != nil {
-			log.Printf("failed to create gz writer")
-			continue
-		}
-
-		err = json.NewEncoder(gz).Encode(metricS)
-		if err != nil {
-			log.Print("failed model encode")
-			continue
-		}
-
-		gz.Close()
-
-		req, err := http.NewRequest(http.MethodPost, url, &buf)
-
-		if err != nil {
-			log.Print("failed to create request")
-			continue
-		}
-
-		req.Header.Set("Content-Encoding", "gzip")
-		resp, err := s.client.Do(req)
-
-		if err != nil {
-			log.Printf("failed to get response: %v", err)
-			//continue потому что если тело не получили, то resp.Body.Close() запаникует
-			continue
-		}
-		resp.Body.Close()
+	for name, delta := range counter {
+		d := &delta
+		metrics = append(metrics, models.Metrics{ID: name, MType: models.Counter, Delta: d})
 	}
+
+	if len(metrics) == 0 {
+		return
+	}
+
+	var bf bytes.Buffer
+
+	gz := gzip.NewWriter(&bf)
+
+	if err := json.NewEncoder(gz).Encode(metrics); err != nil {
+		return
+	}
+
+	gz.Close()
+
+	url := fmt.Sprintf("http://%s/updates/", s.serverAddr)
+	req, err := http.NewRequest(http.MethodPost, url, &bf)
+
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return
+	}
+
+	resp.Body.Close()
 }
