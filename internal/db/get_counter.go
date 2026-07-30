@@ -1,6 +1,9 @@
 package db
 
-import "context"
+import (
+	"context"
+	"metrics/internal/retry"
+)
 
 func (p *DB) GetCounter(ctx context.Context, name string) (int64, error) {
 	query := `
@@ -10,9 +13,12 @@ func (p *DB) GetCounter(ctx context.Context, name string) (int64, error) {
 
 	var result int64
 
-	row := p.db.QueryRowContext(ctx, query, name)
+	err := retry.WithRetry(func() error {
+		row := p.db.QueryRowContext(ctx, query, name)
+		return row.Scan(&result)
+	}, isRetriableDB)
 
-	if err := row.Scan(&result); err != nil {
+	if err != nil {
 		return 0, err
 	}
 

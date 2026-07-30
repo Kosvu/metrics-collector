@@ -1,6 +1,9 @@
 package db
 
-import "context"
+import (
+	"context"
+	"metrics/internal/retry"
+)
 
 type gauge struct {
 	name  string
@@ -26,49 +29,56 @@ func (p *DB) GetAll(ctx context.Context) (map[string]float64, map[string]int64, 
 	SELECT name,delta FROM counter
 	`
 
-	rowsGauge, err := p.db.QueryContext(ctx, queryGauge)
+	err := retry.WithRetry(func() error {
+		resultGauge = make(map[string]float64)
+		rowsGauge, err := p.db.QueryContext(ctx, queryGauge)
+		if err != nil {
+			return err
+		}
+		defer rowsGauge.Close()
+
+		for rowsGauge.Next() {
+			var g gauge
+
+			if err := rowsGauge.Scan(&g.name, &g.value); err != nil {
+				return err
+			}
+
+			resultGauge[g.name] = g.value
+		}
+
+		return rowsGauge.Err()
+
+	}, isRetriableDB)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	for rowsGauge.Next() {
-		var g gauge
+	err = retry.WithRetry(func() error {
+		resultCounter = make(map[string]int64)
+		rowsCounter, err := p.db.QueryContext(ctx, queryCounter)
+		if err != nil {
+			return err
+		}
+		defer rowsCounter.Close()
 
-		if err := rowsGauge.Scan(&g.name, &g.value); err != nil {
-			return nil, nil, err
+		for rowsCounter.Next() {
+			var c counter
+
+			if err := rowsCounter.Scan(&c.name, &c.delta); err != nil {
+				return err
+			}
+
+			resultCounter[c.name] = c.delta
 		}
 
-		resultGauge[g.name] = g.value
-	}
-
-	if err := rowsGauge.Err(); err != nil {
-		return nil, nil, err
-	}
-
-	rowsGauge.Close()
-
-	rowsCounter, err := p.db.QueryContext(ctx, queryCounter)
+		return rowsCounter.Err()
+	}, isRetriableDB)
 
 	if err != nil {
 		return nil, nil, err
 	}
-
-	for rowsCounter.Next() {
-		var c counter
-
-		if err := rowsCounter.Scan(&c.name, &c.delta); err != nil {
-			return nil, nil, err
-		}
-
-		resultCounter[c.name] = c.delta
-	}
-
-	if err := rowsCounter.Err(); err != nil {
-		return nil, nil, err
-	}
-
-	rowsCounter.Close()
 
 	return resultGauge, resultCounter, nil
 }
