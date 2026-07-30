@@ -1,6 +1,9 @@
 package db
 
-import "context"
+import (
+	"context"
+	"metrics/internal/retry"
+)
 
 func (p *DB) SaveGauge(ctx context.Context, name string, value float64) error {
 
@@ -8,10 +11,8 @@ func (p *DB) SaveGauge(ctx context.Context, name string, value float64) error {
 		`INSERT INTO gauge (name,value) VALUES ($1, $2)
 		ON CONFLICT (name) DO UPDATE SET value=$2;`
 
-	if _, err := p.db.ExecContext(ctx, query, name, value); err != nil {
+	return retry.WithRetry(func() error {
+		_, err := p.db.ExecContext(ctx, query, name, value)
 		return err
-	}
-
-	return nil
-
+	}, isRetriableDB)
 }

@@ -1,9 +1,15 @@
 package db
 
-import "context"
+import (
+	"context"
+	"metrics/internal/retry"
+)
 
 func (p *DB) Ping(ctx context.Context) error {
-	err := p.db.PingContext(ctx)
+	retry.WithRetry(func() error {
+		err := p.db.PingContext(ctx)
+		return err
+	}, isRetriableDB)
 
-	return err
+	return nil
 }

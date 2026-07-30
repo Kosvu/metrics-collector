@@ -1,6 +1,9 @@
 package db
 
-import "context"
+import (
+	"context"
+	"metrics/internal/retry"
+)
 
 func (p *DB) SaveCounter(ctx context.Context, name string, value int64) error {
 	query := `
@@ -8,9 +11,8 @@ func (p *DB) SaveCounter(ctx context.Context, name string, value int64) error {
 	ON CONFLICT (name) DO UPDATE SET delta = counter.delta + $2;
 	`
 
-	if _, err := p.db.ExecContext(ctx, query, name, value); err != nil {
+	return retry.WithRetry(func() error {
+		_, err := p.db.ExecContext(ctx, query, name, value)
 		return err
-	}
-
-	return nil
+	}, isRetriableDB)
 }

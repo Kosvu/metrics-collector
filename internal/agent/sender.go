@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	models "metrics/internal/model"
+	"metrics/internal/retry"
 	"net/http"
 )
 
@@ -46,28 +47,32 @@ func (s *Sender) Send() {
 		return
 	}
 
-	var bf bytes.Buffer
+	retry.WithRetry(func() error {
+		var bf bytes.Buffer
 
-	gz := gzip.NewWriter(&bf)
+		gz := gzip.NewWriter(&bf)
 
-	if err := json.NewEncoder(gz).Encode(metrics); err != nil {
-		return
-	}
+		if err := json.NewEncoder(gz).Encode(metrics); err != nil {
+			return err
+		}
 
-	gz.Close()
+		gz.Close()
 
-	url := fmt.Sprintf("http://%s/updates/", s.serverAddr)
-	req, err := http.NewRequest(http.MethodPost, url, &bf)
+		url := fmt.Sprintf("http://%s/updates/", s.serverAddr)
+		req, err := http.NewRequest(http.MethodPost, url, &bf)
 
-	if err != nil {
-		return
-	}
+		if err != nil {
+			return err
+		}
 
-	req.Header.Set("Content-Encoding", "gzip")
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return
-	}
+		req.Header.Set("Content-Encoding", "gzip")
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return err
+		}
 
-	resp.Body.Close()
+		resp.Body.Close()
+		return nil
+	}, isRetriableNet)
+
 }
