@@ -35,7 +35,7 @@ func TestSend(t *testing.T) {
 	}))
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")
-	sender := NewSender(&fakeReader{}, addr, srv.Client())
+	sender := NewSender(&fakeReader{}, addr, "", srv.Client())
 	sender.Send()
 	require.NotNil(t, got["Alloc"].Value)
 	assert.Equal(t, float64(1), *got["Alloc"].Value)
