@@ -1,8 +1,11 @@
 package middleware
 
 import (
+	"bytes"
 	"compress/gzip"
+	"encoding/hex"
 	"io"
+	"metrics/internal/hash"
 	"net/http"
 	"strings"
 	"time"
@@ -10,12 +13,26 @@ import (
 	"go.uber.org/zap"
 )
 
+type signWriter struct {
+	http.ResponseWriter
+	buf    bytes.Buffer
+	status int
+}
+
+func (w *signWriter) Write(b []byte) (int, error) {
+	return w.buf.Write(b)
+}
+
+func (w *signWriter) WriteHeader(status int) {
+	w.status = status
+}
+
 type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
 }
 
-func (w gzipWriter) Write(b []byte) (int, error) {
+func (w *gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
@@ -71,6 +88,74 @@ func WithLogging(log *zap.SugaredLogger) Middleware {
 	}
 }
 
+func SignResponse(key string) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			if key == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			wr := &signWriter{ResponseWriter: w, status: 200}
+			next.ServeHTTP(wr, r)
+			data := wr.buf.Bytes()
+			signData := hash.Sign(data, []byte(key))
+			w.Header().Set("HashSHA256", hex.EncodeToString(signData))
+
+			w.WriteHeader(wr.status)
+			w.Write(data)
+		})
+	}
+}
+
+func SignCheck(key string) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if key == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			dataSign := r.Header.Get("HashSHA256")
+
+			if dataSign == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			dataDecSign, err := hex.DecodeString(dataSign)
+
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			body, err := io.ReadAll(r.Body)
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			bodyReader := bytes.NewReader(body)
+			doneReader := io.NopCloser(bodyReader)
+
+			r.Body = doneReader
+
+			f := hash.Verify(body, dataDecSign, []byte(key))
+
+			if !f {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			} else {
+				next.ServeHTTP(w, r)
+			}
+
+		})
+	}
+}
+
 func GZipHandle() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +179,7 @@ func GZipHandle() Middleware {
 				defer zw.Close()
 
 				w.Header().Set("Content-Encoding", "gzip")
-				next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: zw}, r)
+				next.ServeHTTP(&gzipWriter{ResponseWriter: w, Writer: zw}, r)
 				return
 			}
 

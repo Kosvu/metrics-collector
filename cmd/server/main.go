@@ -51,6 +51,8 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.GZipHandle())
+	r.Use(middleware.SignCheck(cfg.Key))
+	r.Use(middleware.SignResponse(cfg.Key))
 	r.Use(middleware.WithLogging(log))
 
 	r.Get("/value/{type}/{name}", metricsHTTP.GetMetrics)

@@ -13,7 +13,7 @@ func main() {
 
 	storage := agent.NewAgentStorage()
 	collector := agent.NewCollector(storage)
-	sender := agent.NewSender(storage, cfg.Addr, client)
+	sender := agent.NewSender(storage, cfg.Addr, cfg.Key, client)
 
 	go func() {
 		for {

@@ -13,12 +13,14 @@ type ServerConfig struct {
 	FileStoragePath string
 	Restore         bool
 	Dsn             string
+	Key             string
 }
 
 type AgentConfig struct {
 	Addr           string
 	ReportInterval int
 	PollInterval   int
+	Key            string
 }
 
 func NewServerConfig() *ServerConfig {
@@ -29,8 +31,12 @@ func NewServerConfig() *ServerConfig {
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
 	flag.BoolVar(&cfg.Restore, "r", true, "restore")
 	flag.StringVar(&cfg.Dsn, "d", "", "dsn for connect to database")
+	flag.StringVar(&cfg.Key, "k", "", "key for sign")
 	flag.Parse()
 
+	if envKey := os.Getenv("KEY"); envKey != "" {
+		cfg.Key = envKey
+	}
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
 		cfg.Addr = envAddr
 	}
@@ -64,9 +70,13 @@ func NewAgentConfig() *AgentConfig {
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "server address")
 	flag.IntVar(&cfg.ReportInterval, "r", 10, "report interval, sec")
 	flag.IntVar(&cfg.PollInterval, "p", 2, "poll interval, sec")
+	flag.StringVar(&cfg.Key, "k", "", "key for sign")
 
 	flag.Parse()
 
+	if envKey := os.Getenv("KEY"); envKey != "" {
+		cfg.Key = envKey
+	}
 	if v := os.Getenv("ADDRESS"); v != "" {
 		cfg.Addr = v
 	}
