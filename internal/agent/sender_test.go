@@ -23,20 +23,22 @@ func TestSend(t *testing.T) {
 	got := make(map[string]models.Metrics)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var metrics []models.Metrics
+		var metric models.Metrics
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 		defer gz.Close()
-		err = json.NewDecoder(gz).Decode(&metrics)
+		err = json.NewDecoder(gz).Decode(&metric)
 		require.NoError(t, err)
-		for _, m := range metrics {
-			got[m.ID] = m
-		}
+		got[metric.ID] = metric
 	}))
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")
 	sender := NewSender(&fakeReader{}, addr, "", srv.Client())
-	sender.Send()
+	metArr := sender.CollectorMetrics()
+	for _, elem := range metArr {
+		err := sender.Send(elem)
+		require.NoError(t, err)
+	}
 	require.NotNil(t, got["Alloc"].Value)
 	assert.Equal(t, float64(1), *got["Alloc"].Value)
 	require.NotNil(t, got["PollCount"].Delta)

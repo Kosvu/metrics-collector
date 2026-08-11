@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"metrics/internal/hash"
 	models "metrics/internal/model"
 	"metrics/internal/retry"
@@ -33,7 +32,7 @@ func NewSender(metricsReader MetricsReader, serverAddr string, key string, clien
 	}
 }
 
-func (s *Sender) Send() {
+func (s *Sender) CollectorMetrics() []models.Metrics {
 
 	var metrics []models.Metrics
 	gauge, counter := s.metricsReader.GetAll()
@@ -48,16 +47,16 @@ func (s *Sender) Send() {
 		metrics = append(metrics, models.Metrics{ID: name, MType: models.Counter, Delta: d})
 	}
 
-	if len(metrics) == 0 {
-		return
-	}
+	return metrics
+}
 
-	b, err := json.Marshal(metrics)
+func (s *Sender) Send(metric models.Metrics) error {
+	b, err := json.Marshal(metric)
 
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
+
 	var signString string
 
 	if s.key != "" {
@@ -65,7 +64,7 @@ func (s *Sender) Send() {
 		signString = hex.EncodeToString(sign)
 	}
 
-	retry.WithRetry(func() error {
+	return retry.WithRetry(func() error {
 		var bf bytes.Buffer
 
 		gz := gzip.NewWriter(&bf)
@@ -77,7 +76,7 @@ func (s *Sender) Send() {
 
 		gz.Close()
 
-		url := fmt.Sprintf("http://%s/updates/", s.serverAddr)
+		url := fmt.Sprintf("http://%s/update/", s.serverAddr)
 		req, err := http.NewRequest(http.MethodPost, url, &bf)
 
 		if err != nil {
@@ -96,5 +95,4 @@ func (s *Sender) Send() {
 		resp.Body.Close()
 		return nil
 	}, isRetriableNet)
-
 }
