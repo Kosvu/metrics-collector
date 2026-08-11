@@ -21,6 +21,7 @@ type AgentConfig struct {
 	ReportInterval int
 	PollInterval   int
 	Key            string
+	RateLimit      int
 }
 
 func NewServerConfig() *ServerConfig {
@@ -71,8 +72,19 @@ func NewAgentConfig() *AgentConfig {
 	flag.IntVar(&cfg.ReportInterval, "r", 10, "report interval, sec")
 	flag.IntVar(&cfg.PollInterval, "p", 2, "poll interval, sec")
 	flag.StringVar(&cfg.Key, "k", "", "key for sign")
+	flag.IntVar(&cfg.RateLimit, "l", 3, "value for rate limit")
 
 	flag.Parse()
+
+	if envRateLimit := os.Getenv("RATE_LIMIT"); envRateLimit != "" {
+		envRateInt, err := strconv.Atoi(envRateLimit)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cfg.RateLimit = envRateInt
+	}
 
 	if envKey := os.Getenv("KEY"); envKey != "" {
 		cfg.Key = envKey
@@ -97,6 +109,10 @@ func NewAgentConfig() *AgentConfig {
 		}
 
 		cfg.PollInterval = envPollInt
+	}
+
+	if cfg.RateLimit <= 0 {
+		log.Fatalf("rate limit must be > 0, got %d", cfg.RateLimit)
 	}
 
 	return cfg
